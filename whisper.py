@@ -20,7 +20,6 @@ else:
         logging.info("Exiting the script.")
         exit(0)
 
-
 def process_audio(audio_path, output_folder):
     model_name = "large-v2"  # Define the model name
     mtypes = {'cpu': 'int8', 'cuda': 'float16'}
@@ -46,7 +45,7 @@ def process_audio(audio_path, output_folder):
     # Iterate through segments and create audio files
     logging.info("Creating audio segments")
     for i, segment in enumerate(segments):
-        start_time = int(segment.start * sample_rate)  # Accessing attributes directly
+        start_time = int(segment.start * sample_rate) # Accessing attributes directly
         end_time = int(segment.end * sample_rate)
         segment_audio = audio[start_time:end_time]
         segment_path = os.path.join(output_folder, f"segment_{i}.wav")
@@ -57,7 +56,6 @@ def process_audio(audio_path, output_folder):
     logging.info("Clearing GPU memory")
     del whisper_model
     torch.cuda.empty_cache()
-
 
 def main(input_directory=None):
     if input_directory is None:
@@ -79,7 +77,6 @@ def main(input_directory=None):
     # Process each audio file
     for audio_file in audio_files:
         process_audio(audio_file, output_directory)
-
 
 if __name__ == "__main__":
     main()
