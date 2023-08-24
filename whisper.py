@@ -4,8 +4,22 @@ import torch
 import soundfile as sf
 from faster_whisper import WhisperModel
 from glob import glob
+from datetime import datetime
 
-logging.basicConfig(level=logging.INFO)
+# Set up logging
+log_directory = 'logs'
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+
+# Format the current date and time to be used in the log file name
+current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_filename = os.path.join(log_directory, f'whisper_log_{current_time}.txt')
+
+logging.basicConfig(
+    filename=log_filename,
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 # Check for CUDA device
 if torch.cuda.is_available():
@@ -21,7 +35,7 @@ else:
         exit(0)
 
 def process_audio(audio_path, output_folder):
-    model_name = "large-v2"  # Define the model name
+    model_name = "large-v2"
     mtypes = {'cpu': 'int8', 'cuda': 'float16'}
 
     logging.info(f"Processing audio file {audio_path}")
@@ -45,7 +59,7 @@ def process_audio(audio_path, output_folder):
     # Iterate through segments and create audio files
     logging.info("Creating audio segments")
     for i, segment in enumerate(segments):
-        start_time = int(segment.start * sample_rate) # Accessing attributes directly
+        start_time = int(segment.start * sample_rate)
         end_time = int(segment.end * sample_rate)
         segment_audio = audio[start_time:end_time]
         segment_path = os.path.join(output_folder, f"segment_{i}.wav")
@@ -57,14 +71,16 @@ def process_audio(audio_path, output_folder):
     del whisper_model
     torch.cuda.empty_cache()
 
-def main(input_directory=None):
-    if input_directory is None:
+def main():
+    # Check for input directory in temp folder
+    input_directory = os.path.join("temp_folder", "resample")
+    if not os.path.exists(input_directory) or not os.listdir(input_directory):
         input_directory = input("Please enter the input directory: ")
 
     logging.info(f"Input directory: {input_directory}")
 
-    # Create output directory inside input directory
-    output_directory = os.path.join(input_directory, "output_segments")
+    # Create output directory inside temp folder
+    output_directory = os.path.join("temp_folder", "whisper_output")
     os.makedirs(output_directory, exist_ok=True)
 
     # Find all audio files in the input directory (.wav, .flac, .mp3)

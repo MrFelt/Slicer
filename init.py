@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 import logging
+import tempfile
+import shutil
 
 # Set up logging
 log_directory = 'logs'
@@ -13,6 +15,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
 
 def find_audio_files(directory):
     logging.info(f'Searching for audio files in {directory}')
@@ -28,18 +31,22 @@ def find_audio_files(directory):
     logging.info(f'Found {len(audio_files)} audio files')
     return audio_files
 
+
 def main():
     logging.info('Initiating the process')
 
-    if len(sys.argv) != 2:
-        print("Usage: python main_script.py <directory_path>")
-        return
+    directory_path = None
 
-    directory_path = sys.argv[1]
-
-    if not os.path.isdir(directory_path):
-        print("Invalid directory path.")
-        return
+    if len(sys.argv) == 2:
+        directory_path = sys.argv[1]
+        if not os.path.isdir(directory_path):
+            print("Invalid directory path.")
+            return
+    else:
+        directory_path = input("Please enter the directory path: ")
+        if not os.path.isdir(directory_path):
+            print("Invalid directory path.")
+            return
 
     audio_files = find_audio_files(directory_path)
 
@@ -47,17 +54,26 @@ def main():
         print("No audio files found in the given directory.")
         return
 
-    resample_script = "resample.py"
+    temp_folder = "temp_folder"
+    os.makedirs(temp_folder, exist_ok=True)
 
-    for audio_file in audio_files:
-        logging.info(f'Running resample.py on {audio_file}')
-        subprocess.run(["python", resample_script, audio_file])
+    try:
+        logging.info(f'Running resample.py on {audio_files}')
+        resample_script = "resample.py"
+        subprocess.run(["python", resample_script] + audio_files)
 
-        resampled_audio_file = os.path.join(os.path.dirname(audio_file),
-                                            "resampled_" + os.path.basename(audio_file))
-        logging.info(f'Running whisper.py on {resampled_audio_file}')
+        logging.info('Running whisper.py')
         whisper_script = "whisper.py"
-        subprocess.run(["python", whisper_script, resampled_audio_file])
+        subprocess.run(["python", whisper_script])
+
+        logging.info('Running split.py')
+        split_script = "split.py"
+        subprocess.run(["python", split_script])
+
+        logging.info('Processing completed.')
+    finally:
+        shutil.rmtree(temp_folder)  # Cleanup temp directory
+
 
 if __name__ == "__main__":
     main()

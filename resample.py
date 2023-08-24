@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import concurrent.futures
 import logging
 
 # Set up logging
@@ -15,16 +14,16 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-def resample_audio(input_audio):
+def resample_audio(input_audio, output_audio):
     logging.info(f'Starting resampling for {input_audio}')
     try:
         # Using FFmpeg to resample and convert to FLAC format
         command = [
             "ffmpeg", "-i", input_audio, "-ar", "48000", "-ac", "1", "-c:a", "flac",
-            "-sample_fmt", "s32", "-b:a", "256k", "-f", "null", "-"
+            "-sample_fmt", "s32", "-b:a", "256k", output_audio
         ]
         subprocess.run(command, check=True)
-        logging.info(f"Resampled: {input_audio}")
+        logging.info(f"Resampled: {input_audio} to {output_audio}")
     except subprocess.CalledProcessError as e:
         logging.error(f"Error resampling {input_audio}: {e}")
         print(f"Error resampling {input_audio}: {e}")
@@ -32,21 +31,13 @@ def resample_audio(input_audio):
 def main():
     logging.info('Initiating resampling process')
 
-    if len(sys.argv) < 2:
-        print("Usage: python resample.py <audio_file1> [<audio_file2> ...]")
+    if len(sys.argv) != 2:
+        print("Usage: python resample.py <input_audio_file>")
         return
 
-    input_audio_files = sys.argv[1:]
-
-    cpu_count = os.cpu_count()
-    max_workers = int((cpu_count / 2) * 0.4)  # Calculate max_workers based on CPU thread count
-    max_workers = max(max_workers, 1)  # Ensure at least 1 worker
-
-    logging.info(f'Starting resampling with {max_workers} workers')
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for input_audio in input_audio_files:
-            executor.submit(resample_audio, input_audio)
+    input_audio_file = sys.argv[1]
+    output_audio_file = os.path.join("temp_folder", "resample", "resampled_" + os.path.basename(input_audio_file))
+    resample_audio(input_audio_file, output_audio_file)
 
     logging.info('Resampling process completed')
 

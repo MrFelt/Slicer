@@ -1,0 +1,1 @@
+2023-08-24 15:34:35,575 - INFO - Exiting the script.
