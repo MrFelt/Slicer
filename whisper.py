@@ -1,37 +1,58 @@
 import sys
-import whisper
+import os
 
+def process_audio(audio_path, output_folder):
+    import torch
+    import soundfile as sf
+    from faster_whisper import WhisperModel
 
-def process_audio(audio_path):
-    model = whisper.load_model("models/whisper_medium.safetensors")
+    model_path = "models/whisper_medium.safetensors"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    mtypes = {'cpu': 'int8', 'cuda': 'float16'}
 
-    # load audio and pad/trim it to fit 30 seconds
-    audio = whisper.load_audio(audio_path)
-    audio = whisper.pad_or_trim(audio)
+    print(f"Processing audio file {audio_path}")
 
-    # make log-Mel spectrogram and move to the same device as the model
-    mel = whisper.log_mel_spectrogram(audio).to(model.device)
+    # Initialize Whisper model
+    whisper_model = WhisperModel(model_path, device=device, compute_type=mtypes[device])
 
-    # detect the spoken language
-    _, probs = model.detect_language(mel)
-    detected_language = max(probs, key=probs.get)
+    # Transcribe the audio to get segments
+    segments, _ = whisper_model.transcribe(audio_path, beam_size=1, word_timestamps=True)
 
-    # decode the audio
-    options = whisper.DecodingOptions()
-    result = whisper.decode(model, mel, options)
+    # Read the audio file
+    audio, sample_rate = sf.read(audio_path)
 
-    recognized_text = result.text
+    # Create the output folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
 
-    return detected_language, recognized_text
+    # Iterate through segments and create audio files
+    for i, segment in enumerate(segments):
+        start_time = int(segment['start'] * sample_rate)
+        end_time = int(segment['end'] * sample_rate)
+        segment_audio = audio[start_time:end_time]
+        segment_path = os.path.join(output_folder, f"segment_{i}.wav")
+        sf.write(segment_path, segment_audio, sample_rate)
+        print(f"Exported segment {i} to {segment_path}")
 
+    # Clear GPU memory
+    del whisper_model
+    torch.cuda.empty_cache()
+
+def main(input_directory=None):
+    from glob import glob
+
+    if input_directory is None:
+        input_directory = input("Please enter the input directory: ")
+
+    # Create output directory inside input directory
+    output_directory = os.path.join(input_directory, "output_segments")
+    os.makedirs(output_directory, exist_ok=True)
+
+    # Find all audio files in the input directory
+    audio_files = glob(os.path.join(input_directory, "*.wav"))
+
+    # Process each audio file
+    for audio_file in audio_files:
+        process_audio(audio_file, output_directory)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python whisper.py <audio_path>")
-        sys.exit(1)
-
-    audio_path = sys.argv[1]
-    language, recognized_text = process_audio(audio_path)
-
-    print(f"Detected language: {language}")
-    print(f"Recognized text: {recognized_text}")
+    main()
