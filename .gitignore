@@ -13,3 +13,5 @@
 *.wav
 *.flac
 *.flac
+*.log
+logs/init.log
