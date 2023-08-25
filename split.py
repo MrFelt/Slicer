@@ -27,7 +27,13 @@ def split_at_quietest_point(segment, window_len=10):
         if window_avg < quietest_avg:
             quietest_avg = window_avg
             quietest_point = i
+
+    # Check to avoid an indefinite loop
+    if quietest_point == 0 or quietest_point == len(segment):
+        return segment, AudioSegment.silent(duration=0)
+
     return segment[:quietest_point], segment[quietest_point:]
+
 
 def split_audio(file_path, output_folder, segment_counter):
     logging.info(f'Loading audio file: {file_path}')
@@ -37,8 +43,8 @@ def split_audio(file_path, output_folder, segment_counter):
     logging.info('Splitting on silence')
     segments = split_on_silence(
         audio,
-        min_silence_len=50,
-        silence_thresh=-40
+        min_silence_len=175,
+        silence_thresh=-35
     )
 
     logging.info(f'Found {len(segments)} segments')
@@ -80,8 +86,10 @@ def main():
     output_directory = os.path.join(os.getcwd(), "outputs", output_folder_name)
     os.makedirs(output_directory, exist_ok=True)
 
-    audio_files = [os.path.join(input_directory, file) for file in os.listdir(input_directory) if
+    # Find all audio files in the input directory recursively
+    audio_files = [os.path.join(root, file) for root, dirs, files in os.walk(input_directory) for file in files if
                    file.endswith(('.wav', '.flac', '.mp3'))]
+
     logging.info(f'Found {len(audio_files)} audio files')
 
     segment_counter = 1

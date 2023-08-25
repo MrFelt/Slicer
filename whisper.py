@@ -45,16 +45,29 @@ def process_audio(audio_path, output_folder):
     logging.info(f"Loading Whisper model {model_name}")
     whisper_model = WhisperModel(model_name, device=device, compute_type=mtypes[device])
 
-    # Transcribe the audio to get segments
-    logging.info("Transcribing audio to get segments")
-    segments, _ = whisper_model.transcribe(audio_path, beam_size=1, word_timestamps=True)
+    # Transcribe the audio to get segments using VAD
+    logging.info("Transcribing audio to get segments using VAD")
+    segments, _ = whisper_model.transcribe(
+        audio_path,
+        vad_filter=True,
+        vad_parameters=dict(
+            threshold=0.66,
+            min_silence_duration_ms=10,
+            min_speech_duration_ms=500,
+            speech_pad_ms=250,
+            window_size_samples=512
+        )
+    )
 
     # Read the audio file
     logging.info("Reading audio file")
     audio, sample_rate = sf.read(audio_path)
 
-    # Create the output folder if it doesn't exist
-    os.makedirs(output_folder, exist_ok=True)
+    # Create a unique subfolder based on the input file name
+    audio_file_name = os.path.basename(audio_path)
+    audio_file_base_name, _ = os.path.splitext(audio_file_name)
+    unique_output_folder = os.path.join(output_folder, audio_file_base_name)
+    os.makedirs(unique_output_folder, exist_ok=True)
 
     # Iterate through segments and create audio files
     logging.info("Creating audio segments")
@@ -62,7 +75,7 @@ def process_audio(audio_path, output_folder):
         start_time = int(segment.start * sample_rate)
         end_time = int(segment.end * sample_rate)
         segment_audio = audio[start_time:end_time]
-        segment_path = os.path.join(output_folder, f"segment_{i}.wav")
+        segment_path = os.path.join(unique_output_folder, f"segment_{i}.wav")
         sf.write(segment_path, segment_audio, sample_rate)
         logging.info(f"Exported segment {i} to {segment_path}")
 
