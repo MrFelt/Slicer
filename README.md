@@ -14,3 +14,11 @@ I hold no experience in coding, and everything is provided pretty much as is, bu
 
  **it works on my system™**
 
+
+
+
+### Installation:
+
+1. Download as a zip, or clone. You will know the benefits of either or, if you don't, just download as a zip.
+2. Make sure you have python 3.10.x installed. Should not matter which, just as long as it is 3.10.
+3. Run start.bat, leaving it in folder. If you want to run it from a different spot, please just right click it and create a shortcut, and then copy that shortcut to the destination of where you want your shortcut to be. 

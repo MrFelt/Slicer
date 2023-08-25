@@ -15,3 +15,5 @@
 *.flac
 *.log
 logs/init.log
+logs/init.log
+*.log
