@@ -10,4 +10,4 @@ Slicer is a tool designed to automate the processing of audio files. Here's how 
 
 ### Disclaimer
 
-I hold no experience in coding, and everything is provided pretty much as is, but **it works on my system™**.
+I hold no experience in coding, and everything is provided pretty much as is, but **it works on my system™**
