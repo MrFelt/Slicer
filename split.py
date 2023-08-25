@@ -1,45 +1,94 @@
-import librosa
-import numpy as np
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
 import os
+from datetime import datetime
+import logging
 
-def split_audio(file_path, output_folder):
-    # Load audio file
-    y, sr = librosa.load(file_path, sr=None)
+# Set up logging
+log_directory = 'logs'
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
 
-    # Segment analysis
-    window_length = int(sr * 0.01)  # 10ms window
-    avg_volumes = [np.mean(np.abs(y[i:i+window_length])) for i in range(0, len(y), window_length)]
+current_time_log = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_filename = os.path.join(log_directory, f'split_log_{current_time_log}.txt')
 
-    # Find quietest parts and split
-    min_length = sr * 1  # 1 second
-    max_length = sr * 3.7  # 3.7 seconds
-    start_idx = 0
-    for i, volume in enumerate(avg_volumes[:-1]):
-        if volume < avg_volumes[i + 1] and (i + 1) * window_length - start_idx > min_length:
-            split_audio = y[start_idx:(i + 1) * window_length]
-            if len(split_audio) < min_length:  # Add silence padding
-                padding = np.zeros(min_length - len(split_audio))
-                split_audio = np.concatenate((split_audio, padding))
-            librosa.output.write_wav(os.path.join(output_folder, f'split_{i}.wav'), split_audio, sr)
-            start_idx = (i + 1) * window_length
+logging.basicConfig(
+    filename=log_filename,
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
-    # Write the remaining part
-    split_audio = y[start_idx:]
-    if len(split_audio) < min_length:  # Add silence padding
-        padding = np.zeros(min_length - len(split_audio))
-        split_audio = np.concatenate((split_audio, padding))
-    librosa.output.write_wav(os.path.join(output_folder, 'split_last.wav'), split_audio, sr)
+def split_at_quietest_point(segment, window_len=10):
+    quietest_avg = float('inf')
+    quietest_point = 0
+    for i in range(0, len(segment) - window_len, window_len):
+        window = segment[i:i + window_len]
+        window_avg = window.dBFS
+        if window_avg < quietest_avg:
+            quietest_avg = window_avg
+            quietest_point = i
+    return segment[:quietest_point], segment[quietest_point:]
+
+def split_audio(file_path, output_folder, segment_counter):
+    logging.info(f'Loading audio file: {file_path}')
+    audio = AudioSegment.from_file(file_path)
+    logging.info(f'Loaded audio file with length: {len(audio) / 1000:.3f} seconds')
+
+    logging.info('Splitting on silence')
+    segments = split_on_silence(
+        audio,
+        min_silence_len=50,
+        silence_thresh=-40
+    )
+
+    logging.info(f'Found {len(segments)} segments')
+    if not segments:
+        logging.warning('No segments found for splitting')
+        return segment_counter
+
+    for segment in segments:
+        logging.info(f'Processing segment with original length: {len(segment) / 1000:.3f} seconds')
+
+        # Pad segments shorter than 1 second with silence
+        if len(segment) < 1000:
+            segment += AudioSegment.silent(duration=1000 - len(segment))
+            logging.info(f'Padded segment to length: {len(segment) / 1000:.3f} seconds')
+
+        # Split segments longer than 3.7 seconds
+        while len(segment) > 3700:
+            segment_part1, segment = split_at_quietest_point(segment)
+            segment_path = os.path.join(output_folder, f'segment_{segment_counter}.wav')
+            logging.info(f'Saving segment {segment_counter} to {segment_path} with length {len(segment_part1) / 1000:.3f} seconds')
+            segment_part1.export(segment_path, format="wav")
+            segment_counter += 1
+
+        # Save final part of the segment
+        if 1000 <= len(segment) <= 3700:
+            segment_path = os.path.join(output_folder, f'segment_{segment_counter}.wav')
+            logging.info(f'Saving segment {segment_counter} to {segment_path} with length {len(segment) / 1000:.3f} seconds')
+            segment.export(segment_path, format="wav")
+            segment_counter += 1
+
+    return segment_counter
 
 def main():
-    input_folder = os.path.join("temp_folder", "whisper_output")
-    output_folder = os.path.join("outputs", "split_audio")
-    os.makedirs(output_folder, exist_ok=True)
+    logging.info('Starting split process')
+    input_directory = os.path.join(os.getcwd(), "temp", "whisper_output")
+    original_folder_name = os.path.basename(os.path.normpath(input_directory))
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_folder_name = f"{original_folder_name}_{current_time}"
+    output_directory = os.path.join(os.getcwd(), "outputs", output_folder_name)
+    os.makedirs(output_directory, exist_ok=True)
 
-    # Iterate through all files in the input folder
-    for filename in os.listdir(input_folder):
-        if filename.endswith(('.wav', '.flac', '.mp3')):
-            file_path = os.path.join(input_folder, filename)
-            split_audio(file_path, output_folder)
+    audio_files = [os.path.join(input_directory, file) for file in os.listdir(input_directory) if
+                   file.endswith(('.wav', '.flac', '.mp3'))]
+    logging.info(f'Found {len(audio_files)} audio files')
+
+    segment_counter = 1
+    for audio_file in audio_files:
+        segment_counter = split_audio(audio_file, output_directory, segment_counter)
+
+    logging.info('Split process completed')
 
 if __name__ == "__main__":
     main()

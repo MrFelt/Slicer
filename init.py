@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 import logging
-import tempfile
 import shutil
 
 # Set up logging
@@ -54,21 +53,24 @@ def main():
         print("No audio files found in the given directory.")
         return
 
-    temp_folder = "temp_folder"
+    # Create a temp folder within the project directory
+    temp_folder = os.path.join(os.getcwd(), "temp")
     os.makedirs(temp_folder, exist_ok=True)
+
+    python_interpreter = sys.executable
 
     try:
         logging.info(f'Running resample.py on {audio_files}')
         resample_script = "resample.py"
-        subprocess.run(["python", resample_script] + audio_files)
+        subprocess.run([python_interpreter, resample_script] + audio_files)
 
         logging.info('Running whisper.py')
         whisper_script = "whisper.py"
-        subprocess.run(["python", whisper_script])
+        subprocess.run([python_interpreter, whisper_script])
 
         logging.info('Running split.py')
         split_script = "split.py"
-        subprocess.run(["python", split_script])
+        subprocess.run([python_interpreter, split_script])
 
         logging.info('Processing completed.')
     finally:

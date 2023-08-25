@@ -1,0 +1,4 @@
+faster_whisper==0.7.1
+pydub==0.25.1
+soundfile==0.12.1
+torch==2.0.1+cu118
