@@ -51,11 +51,11 @@ def process_audio(audio_path, output_folder):
         audio_path,
         vad_filter=True,
         vad_parameters=dict(
-            threshold=0.66,
-            min_silence_duration_ms=10,
-            min_speech_duration_ms=500,
-            speech_pad_ms=250,
-            window_size_samples=512
+            threshold=0.50,
+            min_silence_duration_ms=250,
+            min_speech_duration_ms=1000,
+            speech_pad_ms=80,
+            window_size_samples=1536
         )
     )
 
@@ -63,10 +63,11 @@ def process_audio(audio_path, output_folder):
     logging.info("Reading audio file")
     audio, sample_rate = sf.read(audio_path)
 
-    # Create a unique subfolder based on the input file name
+    # Create a unique subfolder based on the input file name and current date-time
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     audio_file_name = os.path.basename(audio_path)
     audio_file_base_name, _ = os.path.splitext(audio_file_name)
-    unique_output_folder = os.path.join(output_folder, audio_file_base_name)
+    unique_output_folder = os.path.join(output_folder, f"{audio_file_base_name}_{current_time}")
     os.makedirs(unique_output_folder, exist_ok=True)
 
     # Iterate through segments and create audio files
@@ -75,8 +76,8 @@ def process_audio(audio_path, output_folder):
         start_time = int(segment.start * sample_rate)
         end_time = int(segment.end * sample_rate)
         segment_audio = audio[start_time:end_time]
-        segment_path = os.path.join(unique_output_folder, f"segment_{i}.wav")
-        sf.write(segment_path, segment_audio, sample_rate)
+        segment_path = os.path.join(unique_output_folder, f"segment_{i}.flac")  # Changed extension to .flac
+        sf.write(segment_path, segment_audio, sample_rate, subtype='PCM_24', format='FLAC') # 24 bit .flac
         logging.info(f"Exported segment {i} to {segment_path}")
 
     # Clear GPU memory
