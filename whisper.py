@@ -51,11 +51,11 @@ def process_audio(audio_path, output_folder):
         audio_path,
         vad_filter=True,
         vad_parameters=dict(
-            threshold=0.50,
-            min_silence_duration_ms=150,
+            threshold=0.65,
+            min_silence_duration_ms=80,
             min_speech_duration_ms=1000,
-            speech_pad_ms=50,
-            window_size_samples=512
+            speech_pad_ms=0,
+            window_size_samples=1024
         )
     )
 
