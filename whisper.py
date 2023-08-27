@@ -72,8 +72,8 @@ def process_audio(audio_path, output_folder):
 
 def main():
     input_directory = os.path.join(os.getcwd(), "temp", "resample")
-    if not os.path.exists(input_directory):
-        input_directory = input("Input directory: ")
+    if not os.path.exists(input_directory) or not os.listdir(input_directory):
+        input_directory = input("Please enter the input directory: ")
 
     output_directory = os.path.join(os.getcwd(), "temp", "whisper_output")
     os.makedirs(output_directory, exist_ok=True)
