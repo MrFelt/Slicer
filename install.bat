@@ -8,6 +8,8 @@ if not exist ".\venv" (
     call python -m pip install -r requirements.txt
     pause
 ) else (
-    echo Virtual environment already exists, running start.bat...
-    call start.bat
+    call .\venv\Scripts\activate
+    call python -m pip install -r requirements.txt
+    echo Installed dependencies / Updated dependencies, please run start.bat or whisper.bat...
+    pause
 )
