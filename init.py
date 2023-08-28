@@ -77,5 +77,6 @@ def main():
     #     shutil.rmtree(temp_folder)
     #     logging.info('Temp folder cleaned up.')
 
+
 if __name__ == "__main__":
     main()
