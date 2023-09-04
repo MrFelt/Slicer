@@ -8,8 +8,7 @@ from datetime import datetime
 
 # Set up logging
 log_directory = 'logs'
-if not os.path.exists(log_directory):
-    os.makedirs(log_directory)
+os.makedirs(log_directory, exist_ok=True)
 
 current_time_log = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_filename = os.path.join(log_directory, f'resample_log_{current_time_log}.txt')
@@ -30,8 +29,9 @@ def get_audio_info(input_audio):
         '-show_streams',
         input_audio
     ]
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    audio_info = json.loads(result.stdout)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    output, _ = process.communicate()
+    audio_info = json.loads(output)
 
     # Extract audio properties
     audio_stream = audio_info['streams'][0]
@@ -43,7 +43,7 @@ def get_audio_info(input_audio):
     return sample_fmt, sample_rate, codec_name, bit_depth
 
 
-def should_skip_resampling(sample_fmt, sample_rate, codec_name, bit_depth):
+def should_skip_resampling(sample_rate, codec_name, bit_depth):
     # Conditions for skipping resampling
     if sample_rate == 48000 and (
             (codec_name == 'flac' and bit_depth == '24') or
@@ -59,7 +59,7 @@ def resample_audio(input_audio, output_folder):
 
     sample_fmt, sample_rate, codec_name, bit_depth = get_audio_info(input_audio)
 
-    if should_skip_resampling(sample_fmt, sample_rate, codec_name, bit_depth):
+    if should_skip_resampling(sample_rate, codec_name, bit_depth):
         logging.info(f'Skipping resampling for {input_audio}')
         return
 
